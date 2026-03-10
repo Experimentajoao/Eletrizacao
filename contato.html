@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Eletrização por Contato</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:     #030a10;
+  --panel:  #071018;
+  --card:   #0b1a28;
+  --cyan:   #00f0ff;
+  --yellow: #f5e200;
+  --pink:   #ff0060;
+  --green:  #00ff88;
+  --dim:    #1a3a50;
+  --muted:  #2a5060;
+  --text:   #d0f0ff;
+  --f1: 'Orbitron', monospace;
+  --f2: 'Share Tech Mono', monospace;
+}
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0 }
+body { background:var(--bg); color:var(--text); font-family:var(--f2); min-height:100vh }
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,240,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,240,255,.025) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.page { max-width:1060px; margin:0 auto; padding:28px 16px 50px; position:relative; z-index:1 }
+.back { display:inline-block; font-family:var(--f1); font-size:10px; letter-spacing:3px; color:var(--muted); border:1px solid var(--dim); padding:6px 14px; border-radius:3px; text-decoration:none; margin-bottom:14px }
+.hdr-tag  { font-size:10px; letter-spacing:4px; color:var(--cyan); opacity:.7; margin-bottom:6px }
+.hdr-title{ font-family:var(--f1); font-size:clamp(1.2rem,4vw,1.9rem); font-weight:900; letter-spacing:.06em; text-transform:uppercase; text-shadow:0 0 16px var(--cyan); margin-bottom:24px }
+.hdr-title span { color:var(--green); text-shadow:0 0 16px var(--green) }
+
+/* GRID */
+.grid { display:grid; grid-template-columns:1fr 300px; gap:16px }
+@media(max-width:740px){ .grid { grid-template-columns:1fr } }
+
+/* CANVAS */
+.cw { background:var(–panel); border:1px solid var(–dim); border-radius:6px; overflow:hidden; position:relative }
+#c  { display:block; width:100% }
+.hint { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); font-size:11px; letter-spacing:2px; color:var(–muted); pointer-events:none; white-space:nowrap; transition:opacity .4s }
+
+/* FASE BADGE */
+.phase-badge {
+position:absolute; top:12px; left:50%; transform:translateX(-50%);
+font-family:var(–f1); font-size:10px; letter-spacing:3px;
+padding:5px 14px; border-radius:3px; pointer-events:none;
+transition:opacity .4s, background .4s, color .4s, border-color .4s;
+border:1px solid var(–dim); color:var(–muted); opacity:0;
+}
+.phase-badge.show { opacity:1 }
+.phase-badge.approach { border-color:var(–cyan);  color:var(–cyan);  }
+.phase-badge.contact  { border-color:var(–green); color:var(–green); background:rgba(0,255,136,.07) }
+.phase-badge.separate { border-color:var(–yellow);color:var(–yellow);}
+
+/* BOTÕES */
+.btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px }
+.btn  { font-family:var(–f1); font-size:10px; letter-spacing:2px; text-transform:uppercase; padding:10px 18px; border-radius:3px; cursor:pointer; background:transparent; transition:all .2s }
+.bc { color:var(–green);  border:1px solid var(–green)  }
+.bc:hover { background:var(–green);  color:#000; box-shadow:0 0 12px var(–green)  }
+.bc:disabled { opacity:.3; cursor:not-allowed }
+.by { color:var(–yellow); border:1px solid var(–yellow) }
+.by:hover { background:var(–yellow); color:#000 }
+.bp { color:var(–pink);   border:1px solid var(–pink)   }
+.bp:hover { background:var(–pink);   color:#000 }
+.bw { color:var(–cyan);   border:1px solid var(–cyan)   }
+.bw:hover { background:var(–cyan);   color:#000 }
+
+/* PAINEL LATERAL */
+.side { background:var(–panel); border:1px solid var(–dim); border-radius:6px; padding:18px; display:flex; flex-direction:column; gap:16px }
+.slbl { font-size:10px; letter-spacing:3px; color:var(–cyan); text-transform:uppercase; padding-bottom:7px; border-bottom:1px solid var(–dim) }
+.slbl.green { color:var(–green) }
+
+/* Medidores */
+.meters { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px }
+.meter  { background:var(–card); border:1px solid var(–dim); border-radius:5px; padding:10px; text-align:center; transition:border-color .4s }
+.mn { font-size:9px; letter-spacing:2px; color:var(–muted); margin-bottom:5px }
+.mv { font-family:var(–f1); font-size:1.3rem; font-weight:700 }
+.mu { font-size:9px; color:var(–muted); margin-top:2px }
+.bw2{ height:3px; background:var(–dim); border-radius:2px; margin-top:7px; overflow:hidden }
+.bb { height:100%; border-radius:2px; width:0%; transition:width .5s, background .5s }
+.pos { color:var(–yellow); text-shadow:0 0 8px var(–yellow) }
+.neg { color:var(–cyan);   text-shadow:0 0 8px var(–cyan)   }
+.neu { color:var(–muted) }
+.grn { color:var(–green);  text-shadow:0 0 8px var(–green)  }
+
+/* Controles */
+.ctrl label { display:block; font-size:10px; letter-spacing:2px; color:var(–cyan); margin-bottom:6px }
+select { width:100%; background:var(–card); border:1px solid var(–muted); color:var(–text); font-family:var(–f2); font-size:12px; padding:8px 10px; border-radius:3px }
+select:focus { outline:none; border-color:var(–cyan) }
+.sr { display:flex; align-items:center; gap:10px }
+input[type=range] { flex:1; -webkit-appearance:none; height:3px; border-radius:2px; background:var(–dim); outline:none; cursor:pointer }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:var(–cyan); box-shadow:0 0 6px var(–cyan) }
+.sv { font-size:13px; color:var(–cyan); min-width:22px; text-align:right }
+
+/* Carga inicial slider — destaque verde */
+.green-slider::-webkit-slider-thumb { background:var(–green); box-shadow:0 0 6px var(–green) }
+.sv-green { font-size:13px; color:var(–green); min-width:36px; text-align:right; font-family:var(–f1) }
+
+/* Info do resultado */
+.result-box {
+background:var(–card); border:1px solid var(–dim); border-radius:4px;
+padding:11px 12px; font-size:11px; line-height:1.8; color:var(–muted);
+min-height:52px; transition:border-color .4s;
+}
+.result-box.active { border-color:var(–green) }
+
+/* Log */
+.log { background:var(–card); border:1px solid var(–dim); border-radius:4px; padding:9px; max-height:100px; overflow-y:auto; font-size:11px; line-height:1.8 }
+.log::-webkit-scrollbar { width:3px }
+.log::-webkit-scrollbar-thumb { background:var(–dim); border-radius:2px }
+.le { display:flex; gap:7px }
+.lt { color:var(–cyan); opacity:.6; flex-shrink:0 }
+.lm { color:var(–text) }
+.lev { color:var(–green) }
+.lrs { color:var(–pink) }
+.lwn { color:var(–yellow) }
+</style>
+
+</head>
+<body>
+<div class="page">
+  <a class="back" href="painel-eletrizacao.html">← VOLTAR</a>
+  <div class="hdr-tag">// SIM_02 · ELETROSTÁTICA</div>
+  <h1 class="hdr-title">Eletrização por <span>Contato</span></h1>
+
+  <div class="grid">
+
+```
+<!-- CANVAS -->
+<div>
+  <div class="cw">
+    <canvas id="c"></canvas>
+    <div class="hint" id="hint">CONFIGURE A CARGA E PRESSIONE ENCOSTAR</div>
+    <div class="phase-badge" id="badge"></div>
+  </div>
+  <div class="btns">
+    <button class="btn bc" id="btnTouch" onclick="startSequence()">⚡ Encostar</button>
+    <button class="btn by" id="btnStep"  onclick="nextStep()" style="display:none">→ Continuar</button>
+    <button class="btn bp" onclick="resetSim()">✕ Resetar</button>
+    <button class="btn bw" onclick="toggleAuto()">↻ Auto</button>
+  </div>
+</div>
+
+<!-- LATERAL -->
+<div class="side">
+
+  <!-- Medidores -->
+  <div>
+    <div class="slbl green">Carga Elétrica</div>
+    <div class="meters">
+      <div class="meter" id="mA">
+        <div class="mn" id="mnA">OBJ A</div>
+        <div class="mv neu" id="mvA">0</div>
+        <div class="mu">u.c.</div>
+        <div class="bw2"><div class="bb" id="bbA"></div></div>
+      </div>
+      <div class="meter" id="mB">
+        <div class="mn" id="mnB">OBJ B</div>
+        <div class="mv neu" id="mvB">0</div>
+        <div class="mu">u.c.</div>
+        <div class="bw2"><div class="bb" id="bbB"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Objeto A — Carga e Tamanho -->
+  <div class="ctrl">
+    <label style="color:var(--green)">Objeto A — Carga Inicial</label>
+    <div class="sr">
+      <input type="range" id="sCA" min="-20" max="20" value="10"
+        class="green-slider" oninput="onSliderChange()">
+      <span class="sv-green" id="vCA">+10</span>
+    </div>
+  </div>
+  <div class="ctrl">
+    <label style="color:var(--green)">Objeto A — Tamanho</label>
+    <div class="sr">
+      <input type="range" id="sSA" min="1" max="10" value="5"
+        class="green-slider" oninput="onSliderChange()">
+      <span class="sv-green" id="vSA">5</span>
+    </div>
+  </div>
+
+  <!-- Objeto B — Carga e Tamanho -->
+  <div class="ctrl">
+    <label>Objeto B — Carga Inicial</label>
+    <div class="sr">
+      <input type="range" id="sCB" min="-20" max="20" value="0"
+        oninput="onSliderChange()">
+      <span class="sv" id="vCB">0</span>
+    </div>
+  </div>
+  <div class="ctrl">
+    <label>Objeto B — Tamanho</label>
+    <div class="sr">
+      <input type="range" id="sSB" min="1" max="10" value="5"
+        oninput="onSliderChange()">
+      <span class="sv" id="vSB">5</span>
+    </div>
+  </div>
+
+  <!-- Velocidade -->
+  <div class="ctrl">
+    <label>Velocidade da Animação</label>
+    <div class="sr">
+      <input type="range" id="sSpd" min="1" max="10" value="5"
+        oninput="document.getElementById('vSpd').textContent=this.value">
+      <span class="sv" id="vSpd">5</span>
+    </div>
+  </div>
+
+  <!-- Resultado -->
+  <div>
+    <div class="slbl" style="margin-bottom:8px">Resultado do Contato</div>
+    <div class="result-box" id="resultBox">Aguardando contato...</div>
+  </div>
+
+  <!-- Log -->
+  <div>
+    <div class="slbl" style="margin-bottom:8px">Log de Eventos</div>
+    <div class="log" id="log"></div>
+  </div>
+
+</div>
+```
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// FASES DA ANIMAÇÃO
+// 0 = parado | 1 = aproximando | 2 = contato | 3 = afastando
+// ═══════════════════════════════════════════
+var FASE = {IDLE:0, APPROACH:1, CONTACT:2, SEPARATE:3};
+
+// ═══════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════
+var S = {
+  cA:0, cB:0,           // cargas atuais
+  cA0:10, cB0:0,        // cargas iniciais (antes do contato)
+  cAfinal:0, cBfinal:0, // cargas calculadas após contato
+  fase: FASE.IDLE,
+  dist: 0,              // distância entre os corpos (0 = encostados)
+  MAX_DIST: 0,          // calculado pelo canvas
+  contacted: false,     // já houve contato nessa sequência?
+  autoOn: false, autoTimer:null,
+  elec:[], sparks:[], labs:[],
+  glowA:0, glowB:0,
+  pulseA:0, pulseB:0,   // pulsação quando carregado
+  chargeCloud:[]        // nuvem de partículas no momento do contato
+};
+
+// ═══════════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════════
+var cv = document.getElementById('c');
+var cx = cv.getContext('2d');
+
+function resize() {
+  var wrap = cv.parentElement;
+  var w = wrap.getBoundingClientRect().width;
+  if (!w || w < 10) w = document.documentElement.clientWidth - 32;
+  cv.width  = Math.floor(w);
+  cv.height = Math.min(360, Math.max(240, Math.floor(w * 0.44)));
+  S.MAX_DIST = cv.width * 0.28;
+}
+resize();
+setTimeout(resize, 50);
+setTimeout(resize, 200);
+setTimeout(resize, 600);
+window.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════════
+// FÍSICA — calcula redistribuição de carga
+// Lei: carga total se divide proporcionalmente ao tamanho
+// ═══════════════════════════════════════════
+function calcContact(cA, cB, sizeA, sizeB) {
+  var total = cA + cB;
+  var tA = sizeA / (sizeA + sizeB);
+  var tB = sizeB / (sizeA + sizeB);
+  return {
+    newA: Math.round(total * tA),
+    newB: Math.round(total * tB)
+  };
+}
+
+// ═══════════════════════════════════════════
+// GEOMETRIA DOS OBJETOS
+// ═══════════════════════════════════════════
+function getObjSizes() {
+  var sA   = parseInt(document.getElementById('sSA').value); // 1–10
+  var sB   = parseInt(document.getElementById('sSB').value); // 1–10
+  var base = Math.min(80, cv.height * 0.28);
+  var factA = 0.6 + (sA / 10) * 0.9;  // 0.69 → 1.5
+  var factB = 0.6 + (sB / 10) * 0.9;
+  return {
+    wA: base * factA, hA: base * factA,
+    wB: base * factB, hB: base * factB,
+    sizeA: sA, sizeB: sB   // valores 1–10 usados na física
+  };
+}
+
+function getPos() {
+  var mid  = cv.width / 2;
+  var cy2  = cv.height / 2;
+  var sz   = getObjSizes();
+  var halfA = sz.wA / 2;
+  var halfB = sz.wB / 2;
+  var gap  = 4 + S.dist * S.MAX_DIST;
+  return {
+    ax: mid - halfA - gap/2, ay: cy2,
+    bx: mid + halfB + gap/2, by: cy2,
+    wA: sz.wA, hA: sz.hA,
+    wB: sz.wB, hB: sz.hB,
+    sizeA: sz.sizeA, sizeB: sz.sizeB
+  };
+}
+
+// ═══════════════════════════════════════════
+// DESENHO
+// ═══════════════════════════════════════════
+function rrect(x, y, w, h, r) {
+  if (r < 0) r = 0;
+  if (r > w/2) r = w/2;
+  if (r > h/2) r = h/2;
+  cx.beginPath();
+  cx.moveTo(x+r, y);
+  cx.lineTo(x+w-r, y);
+  cx.quadraticCurveTo(x+w, y,   x+w, y+r);
+  cx.lineTo(x+w, y+h-r);
+  cx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  cx.lineTo(x+r, y+h);
+  cx.quadraticCurveTo(x, y+h,   x, y+h-r);
+  cx.lineTo(x, y+r);
+  cx.quadraticCurveTo(x, y, x+r, y);
+  cx.closePath();
+}
+
+function chargeColor(c) {
+  return c > 0 ? '#f5e200' : c < 0 ? '#00f0ff' : '#335566';
+}
+
+function drawChargeHalo(ox, oy, w, h, charge, glow, pulse) {
+  var abs = charge < 0 ? -charge : charge;
+  if (abs < 1 && glow < 0.05 && pulse < 0.05) return;
+  var gc  = chargeColor(charge);
+  var rad = Math.max(w, h) * 0.6 + abs * 2.5 + glow * 25 + pulse * 12;
+  cx.globalAlpha = Math.min(0.5, glow * 0.7 + abs * 0.018 + pulse * 0.3);
+  cx.fillStyle   = gc;
+  cx.beginPath();
+  cx.arc(ox, oy, rad, 0, 6.2832);
+  cx.fill();
+  cx.globalAlpha = 1;
+}
+
+function drawObj(ox, oy, w, h, charge, glow, pulse, label) {
+  var abs = charge < 0 ? -charge : charge;
+  var gc  = chargeColor(charge);
+
+  drawChargeHalo(ox, oy, w, h, charge, glow, pulse);
+
+  if (abs > 0 || glow > 0.05) { cx.shadowColor = gc; cx.shadowBlur = 8 + glow*14; }
+
+  // corpo
+  rrect(ox - w/2, oy - h/2, w, h, 10);
+  var rval = cx.createLinearGradient(ox-w/2, oy-h/2, ox+w/2, oy+h/2);
+  rval.addColorStop(0, 'rgba(20,60,90,0.92)');
+  rval.addColorStop(1, 'rgba(10,30,50,0.92)');
+  cx.fillStyle = rval;
+  cx.fill();
+  cx.shadowBlur = 0;
+
+  // textura de grade interna
+  cx.save();
+  rrect(ox-w/2, oy-h/2, w, h, 10);
+  cx.clip();
+  cx.strokeStyle = 'rgba(0,200,255,0.07)';
+  cx.lineWidth = 0.8;
+  var i;
+  for (i = ox-w/2; i < ox+w/2; i += 10) {
+    cx.beginPath(); cx.moveTo(i, oy-h/2); cx.lineTo(i, oy+h/2); cx.stroke();
+  }
+  for (i = oy-h/2; i < oy+h/2; i += 10) {
+    cx.beginPath(); cx.moveTo(ox-w/2, i); cx.lineTo(ox+w/2, i); cx.stroke();
+  }
+  // brilho superior
+  var shine = cx.createLinearGradient(ox-w/2, oy-h/2, ox-w/2, oy);
+  shine.addColorStop(0, 'rgba(255,255,255,0.07)');
+  shine.addColorStop(1, 'rgba(255,255,255,0)');
+  cx.fillStyle = shine; cx.fillRect(ox-w/2, oy-h/2, w, h/2);
+  cx.restore();
+
+  // borda
+  rrect(ox-w/2, oy-h/2, w, h, 10);
+  cx.strokeStyle = abs === 0 ? 'rgba(0,200,255,0.22)' : gc;
+  cx.lineWidth   = 1.5 + abs * 0.1 + pulse * 2;
+  if (abs > 0 || glow > 0.05) { cx.shadowColor = gc; cx.shadowBlur = 6 + glow*12 + pulse*10; }
+  cx.stroke();
+  cx.shadowBlur = 0;
+
+  // label do objeto
+  cx.fillStyle = 'rgba(200,240,255,0.5)';
+  cx.font = '10px Share Tech Mono, monospace';
+  cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  cx.fillText(label, ox, oy - h/2 + 14);
+
+  // valor da carga no centro
+  var txt = charge === 0 ? '0' : (charge > 0 ? '+'+charge : ''+charge);
+  cx.font = 'bold '+Math.floor(h * 0.28)+'px Orbitron, monospace';
+  cx.fillStyle = abs === 0 ? 'rgba(100,180,200,0.4)' : gc;
+  if (abs > 0) { cx.shadowColor = gc; cx.shadowBlur = 10; }
+  cx.fillText(txt, ox, oy + 4);
+  cx.shadowBlur = 0;
+
+  // unidade
+  cx.font = '10px Share Tech Mono, monospace';
+  cx.fillStyle = 'rgba(150,200,220,0.4)';
+  cx.fillText('u.c.', ox, oy + h/2 - 12);
+}
+
+// nuvem de partículas do contato
+function drawCloud() {
+  var i, p, a;
+  for (i = 0; i < S.chargeCloud.length; i++) {
+    p = S.chargeCloud[i];
+    a = p.life / p.ml; if (a<0) a=0; if (a>1) a=1;
+    cx.globalAlpha = a * 0.8;
+    cx.fillStyle   = p.c;
+    cx.shadowColor = p.c;
+    cx.shadowBlur  = 8;
+    cx.beginPath();
+    cx.arc(p.x, p.y, p.r * a + 1, 0, 6.2832);
+    cx.fill();
+  }
+  cx.globalAlpha = 1; cx.shadowBlur = 0;
+}
+
+function drawParticles() {
+  var i, a;
+  // elétrons
+  for (i = 0; i < S.elec.length; i++) {
+    var e = S.elec[i];
+    a = e.life/e.ml; if(a<0)a=0; if(a>1)a=1;
+    cx.globalAlpha = a;
+    cx.fillStyle   = '#00f0ff';
+    cx.shadowColor = '#00f0ff'; cx.shadowBlur = 8;
+    cx.beginPath(); cx.arc(e.x, e.y, 4*a+1, 0, 6.2832); cx.fill();
+  }
+  // faíscas
+  for (i = 0; i < S.sparks.length; i++) {
+    var sp = S.sparks[i];
+    a = sp.life/sp.ml; if(a<0)a=0; if(a>1)a=1;
+    cx.globalAlpha = a;
+    cx.strokeStyle = '#f5e200'; cx.lineWidth = a*2;
+    cx.shadowColor = '#f5e200'; cx.shadowBlur = 5;
+    cx.beginPath(); cx.moveTo(sp.x, sp.y);
+    cx.lineTo(sp.x+sp.vx*5, sp.y+sp.vy*5); cx.stroke();
+  }
+  // labels
+  for (i = 0; i < S.labs.length; i++) {
+    var lb = S.labs[i];
+    a = lb.life/lb.ml; if(a<0)a=0; if(a>1)a=1;
+    cx.globalAlpha = a;
+    cx.fillStyle = lb.c; cx.shadowColor = lb.c; cx.shadowBlur = 10;
+    cx.font = 'bold '+lb.sz+'px Orbitron, monospace';
+    cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.fillText(lb.t, lb.x, lb.y);
+  }
+  cx.globalAlpha = 1; cx.shadowBlur = 0;
+}
+
+// linha de contato entre os dois objetos
+function drawContactLine(p) {
+  if (S.dist > 0.05) return;
+  var alpha = (1 - S.dist/0.05) * (S.glowA * 0.8);
+  if (alpha < 0.02) return;
+  var cy2 = cv.height/2;
+  var top    = cy2 - Math.max(p.hA, p.hB)/2 - 4;
+  var bottom = cy2 + Math.max(p.hA, p.hB)/2 + 4;
+  cx.globalAlpha = alpha;
+  cx.strokeStyle = '#00ff88';
+  cx.lineWidth   = 2;
+  cx.shadowColor = '#00ff88'; cx.shadowBlur = 14;
+  cx.beginPath();
+  cx.moveTo(cv.width/2, top);
+  cx.lineTo(cv.width/2, bottom);
+  cx.stroke();
+  cx.globalAlpha = 1; cx.shadowBlur = 0;
+}
+
+// ═══════════════════════════════════════════
+// LOOP PRINCIPAL
+// ═══════════════════════════════════════════
+var lastT = 0;
+var lastW = 0;
+
+function loop(ts) {
+  var curW = cv.parentElement.getBoundingClientRect().width;
+  if (curW > 10 && Math.abs(curW - lastW) > 1) {
+    lastW = curW; resize();
+  }
+
+  var dt = lastT ? (ts - lastT)/16.67 : 1;
+  if (dt > 3) dt = 3;
+  lastT = ts;
+  var spd  = getSpd() / 5;
+  var step = dt * spd;
+
+  // fundo
+  cx.fillStyle = '#030a10';
+  cx.fillRect(0, 0, cv.width, cv.height);
+  cx.strokeStyle = 'rgba(0,200,220,.04)';
+  cx.lineWidth = 1;
+  var x, y;
+  for (x = 0; x < cv.width; x += 38) {
+    cx.beginPath(); cx.moveTo(x,0); cx.lineTo(x,cv.height); cx.stroke();
+  }
+  for (y = 0; y < cv.height; y += 38) {
+    cx.beginPath(); cx.moveTo(0,y); cx.lineTo(cv.width,y); cx.stroke();
+  }
+
+  // mover objetos conforme a fase
+  if (S.fase === FASE.APPROACH) {
+    S.dist -= 0.04 * step;
+    if (S.dist <= 0) {
+      S.dist = 0;
+      onContact();
+    }
+  } else if (S.fase === FASE.SEPARATE) {
+    S.dist += 0.035 * step;
+    if (S.dist >= 1) {
+      S.dist = 1;
+      S.fase = FASE.IDLE;
+      setBadge('', '');
+      document.getElementById('btnTouch').disabled = false;
+      if (S.autoOn) scheduleAuto();
+    }
+  }
+
+  var p = getPos();
+  drawContactLine(p);
+  drawCloud();
+  drawObj(p.ax, p.ay, p.wA, p.hA, S.cA, S.glowA, S.pulseA, 'OBJ A');
+  drawObj(p.bx, p.by, p.wB, p.hB, S.cB, S.glowB, S.pulseB, 'OBJ B');
+  drawParticles();
+
+  // decaimentos
+  S.glowA  = S.glowA  > 0 ? S.glowA  - 0.02*step : 0;
+  S.glowB  = S.glowB  > 0 ? S.glowB  - 0.02*step : 0;
+  S.pulseA = S.pulseA > 0 ? S.pulseA - 0.03*step : 0;
+  S.pulseB = S.pulseB > 0 ? S.pulseB - 0.03*step : 0;
+
+  // partículas
+  var i;
+  for (i = S.elec.length-1; i >= 0; i--) {
+    S.elec[i].x += S.elec[i].vx*step; S.elec[i].y += S.elec[i].vy*step;
+    S.elec[i].life -= step;
+    if (S.elec[i].life <= 0) S.elec.splice(i,1);
+  }
+  for (i = S.sparks.length-1; i >= 0; i--) {
+    S.sparks[i].x  += S.sparks[i].vx*step;
+    S.sparks[i].y  += S.sparks[i].vy*step;
+    S.sparks[i].vy += 0.15*step;
+    S.sparks[i].life -= step;
+    if (S.sparks[i].life <= 0) S.sparks.splice(i,1);
+  }
+  for (i = S.labs.length-1; i >= 0; i--) {
+    S.labs[i].y -= 0.45*step;
+    S.labs[i].life -= step;
+    if (S.labs[i].life <= 0) S.labs.splice(i,1);
+  }
+  for (i = S.chargeCloud.length-1; i >= 0; i--) {
+    S.chargeCloud[i].x += S.chargeCloud[i].vx*step;
+    S.chargeCloud[i].y += S.chargeCloud[i].vy*step;
+    S.chargeCloud[i].life -= step;
+    if (S.chargeCloud[i].life <= 0) S.chargeCloud.splice(i,1);
+  }
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ═══════════════════════════════════════════
+// EVENTO DE CONTATO
+// ═══════════════════════════════════════════
+function onContact() {
+  if (S.contacted) return;
+  S.contacted = true;
+  S.fase = FASE.CONTACT;
+
+  var sz  = getObjSizes();
+  var res = calcContact(S.cA, S.cB, sz.sizeA, sz.sizeB);
+
+  S.cAfinal = res.newA;
+  S.cBfinal = res.newB;
+
+  // animar a redistribuição gradual
+  animateRedistribution(S.cA, S.cB, res.newA, res.newB);
+
+  setBadge('CONTATO', 'contact');
+  spawnContactEffects();
+  showResult(S.cA, S.cB, res.newA, res.newB, sz.sizeA, sz.sizeB);
+  addLog('Contato! '+S.cA+' + '+S.cB+' u.c. → A:'+res.newA+' B:'+res.newB+' u.c.', 'ev');
+
+  // mostrar botão continuar
+  document.getElementById('btnStep').style.display = 'inline-flex';
+}
+
+function animateRedistribution(fromA, fromB, toA, toB) {
+  var steps = 30;
+  var step  = 0;
+  var t = setInterval(function() {
+    step++;
+    var prog = step / steps;
+    S.cA = Math.round(fromA + (toA - fromA) * prog);
+    S.cB = Math.round(fromB + (toB - fromB) * prog);
+    S.glowA = 0.9; S.glowB = 0.9;
+    S.pulseA = 0.8; S.pulseB = 0.8;
+    updateMeters();
+    if (step >= steps) {
+      clearInterval(t);
+      S.cA = toA; S.cB = toB;
+      updateMeters();
+    }
+  }, 40);
+}
+
+// ═══════════════════════════════════════════
+// EFEITOS VISUAIS DO CONTATO
+// ═══════════════════════════════════════════
+function spawnContactEffects() {
+  var p   = getPos();
+  var cx2 = cv.width / 2;
+  var cy2 = cv.height / 2;
+  var n, i, a, sp;
+
+  // faíscas na interface
+  for (i = 0; i < 14; i++) {
+    a = Math.random() * 6.2832;
+    sp = 1.5 + Math.random() * 3;
+    S.sparks.push({x:cx2, y:cy2+(Math.random()-.5)*60, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-1, life:22+Math.random()*20, ml:42});
+  }
+
+  // elétrons voando entre os objetos
+  var dir = S.cA > S.cAfinal ? 1 : -1; // A→B ou B→A
+  n = 6 + Math.floor(Math.abs(S.cA - S.cAfinal) / 2);
+  for (i = 0; i < n; i++) {
+    var fx = dir > 0 ? p.ax : p.bx;
+    var tx = dir > 0 ? p.bx : p.ax;
+    var sy2 = cy2 + (Math.random()-.5)*40;
+    var dx = tx - fx + (Math.random()-.5)*20;
+    var dy = (Math.random()-.5)*30;
+    var d  = Math.sqrt(dx*dx+dy*dy) || 1;
+    var sv = 2 + Math.random()*1.5;
+    var lf = d/sv + 8;
+    S.elec.push({x:fx, y:sy2, vx:dx/d*sv, vy:dy/d*sv, life:lf, ml:lf});
+  }
+
+  // nuvem de brilho no centro
+  for (i = 0; i < 20; i++) {
+    a = Math.random() * 6.2832;
+    sp = 0.5 + Math.random() * 2;
+    S.chargeCloud.push({
+      x:cx2, y:cy2+(Math.random()-.5)*40,
+      vx:Math.cos(a)*sp, vy:Math.sin(a)*sp,
+      r: 4+Math.random()*6,
+      c: '#00ff88',
+      life:30+Math.random()*30, ml:60
+    });
+  }
+
+  // labels de carga
+  S.labs.push({x:p.ax+(Math.random()-.5)*30, y:cy2-40, t:S.cAfinal>=0?'+'+S.cAfinal:''+S.cAfinal, c:'#f5e200', sz:16, life:70, ml:70});
+  S.labs.push({x:p.bx+(Math.random()-.5)*30, y:cy2-40, t:S.cBfinal>=0?'+'+S.cBfinal:''+S.cBfinal, c:'#00f0ff', sz:16, life:70, ml:70});
+
+  S.glowA = 1; S.glowB = 1;
+}
+
+// ═══════════════════════════════════════════
+// SEQUÊNCIA DE AÇÕES
+// ═══════════════════════════════════════════
+function startSequence() {
+  if (S.fase !== FASE.IDLE) return;
+  document.getElementById('btnTouch').disabled = true;
+  document.getElementById('hint').style.opacity = '0';
+  S.contacted = false;
+  S.fase = FASE.APPROACH;
+  setBadge('APROXIMANDO...', 'approach');
+  addLog('Iniciando aproximação dos objetos.', 'ev');
+}
+
+function nextStep() {
+  if (S.fase !== FASE.CONTACT) return;
+  document.getElementById('btnStep').style.display = 'none';
+  S.fase = FASE.SEPARATE;
+  setBadge('SEPARANDO...', 'separate');
+  addLog('Objetos separados. A:'+S.cA+' u.c.  B:'+S.cB+' u.c.', 'ev');
+}
+
+function resetSim() {
+  S.fase = FASE.IDLE;
+  S.dist = 1;
+  S.contacted = false;
+  S.elec = []; S.sparks = []; S.labs = []; S.chargeCloud = [];
+  S.glowA = 0; S.glowB = 0; S.pulseA = 0; S.pulseB = 0;
+  if (S.autoOn) { S.autoOn = false; clearTimeout(S.autoTimer); }
+
+  initCharges();
+  document.getElementById('btnTouch').disabled = false;
+  document.getElementById('btnStep').style.display = 'none';
+  document.getElementById('hint').style.opacity = '1';
+  setBadge('', '');
+  document.getElementById('resultBox').textContent = 'Aguardando contato...';
+  document.getElementById('resultBox').className = 'result-box';
+  updateMeters();
+  updatePreview();
+  addLog('Simulação resetada.', 'rs');
+}
+
+function toggleAuto() {
+  S.autoOn = !S.autoOn;
+  if (S.autoOn) {
+    addLog('Modo automático ATIVADO.', 'ev');
+    if (S.fase === FASE.IDLE) startSequence();
+  } else {
+    clearTimeout(S.autoTimer);
+    addLog('Modo automático desativado.', 'ev');
+  }
+}
+
+function scheduleAuto() {
+  if (!S.autoOn) return;
+  S.autoTimer = setTimeout(function() {
+    if (!S.autoOn) return;
+    // resetar cargas e repetir
+    initCharges();
+    updateMeters();
+    S.contacted = false;
+    document.getElementById('btnStep').style.display = 'none';
+    document.getElementById('resultBox').textContent = 'Aguardando contato...';
+    document.getElementById('resultBox').className = 'result-box';
+    startSequence();
+  }, 1200);
+}
+
+// ═══════════════════════════════════════════
+// UI
+// ═══════════════════════════════════════════
+function getSpd() { return parseInt(document.getElementById('sSpd').value); }
+
+function initCharges() {
+  S.cA0 = parseInt(document.getElementById('sCA').value);
+  S.cB0 = parseInt(document.getElementById('sCB').value);
+  S.cA  = S.cA0;
+  S.cB  = S.cB0;
+}
+
+function onSliderChange() {
+  // atualiza labels dos sliders
+  var cA = parseInt(document.getElementById('sCA').value);
+  var cB = parseInt(document.getElementById('sCB').value);
+  var sA = document.getElementById('sSA').value;
+  var sB = document.getElementById('sSB').value;
+  document.getElementById('vCA').textContent = cA >= 0 ? '+'+cA : ''+cA;
+  document.getElementById('vCB').textContent = cB >= 0 ? '+'+cB : ''+cB;
+  document.getElementById('vSA').textContent = sA;
+  document.getElementById('vSB').textContent = sB;
+  // só reseta se não há animação em curso
+  if (S.fase === FASE.IDLE) {
+    initCharges();
+    updateMeters();
+    updatePreview();
+  }
+}
+
+// mostra prévia do resultado antes do contato
+function updatePreview() {
+  var sz  = getObjSizes();
+  var res = calcContact(S.cA, S.cB, sz.sizeA, sz.sizeB);
+  var box = document.getElementById('resultBox');
+  if (S.fase !== FASE.IDLE) return;
+  var igual = sz.sizeA === sz.sizeB;
+  var html = '<span style="color:#2a5060">Prévia — Total: '+(S.cA+S.cB)+' u.c.</span><br>';
+  if (igual) {
+    html += 'Tamanhos iguais → divisão exata<br>';
+  } else {
+    html += 'A (tam '+sz.sizeA+') : B (tam '+sz.sizeB+')<br>';
+  }
+  html += 'A ficará: <span style="color:#f5e200">'+res.newA+' u.c.</span>  ';
+  html += 'B ficará: <span style="color:#00f0ff">'+res.newB+' u.c.</span>';
+  box.innerHTML = html;
+  box.className = 'result-box';
+}
+
+function updateMeters() {
+  function setM(vid, bid, mid, charge) {
+    var el = document.getElementById(vid);
+    el.textContent = charge >= 0 ? '+'+charge : ''+charge;
+    el.className = 'mv '+(charge>0?'pos':charge<0?'neg':'neu');
+    var b = document.getElementById(bid);
+    b.style.width = Math.min(100, Math.abs(charge)/20*100)+'%';
+    b.style.background = charge>0 ? '#f5e200' : '#00f0ff';
+  }
+  setM('mvA','bbA','mA',S.cA);
+  setM('mvB','bbB','mB',S.cB);
+}
+
+function setBadge(text, cls) {
+  var b = document.getElementById('badge');
+  b.textContent = text;
+  b.className   = 'phase-badge' + (text ? ' show '+cls : '');
+}
+
+function showResult(cA0, cB0, cAf, cBf, sA, sB) {
+  var box   = document.getElementById('resultBox');
+  var total = cA0 + cB0;
+  var igual = sA === sB;
+  var html  = '<b style="color:#00ff88">Carga total conservada: '+total+' u.c.</b><br>';
+  if (igual) {
+    html += 'Tamanhos iguais — divisão exata<br>';
+  } else {
+    html += 'Redistribuição proporcional: A('+sA+') B('+sB+')<br>';
+  }
+  html += 'A: <span style="color:#f5e200">'+cAf+' u.c.</span>  ';
+  html += 'B: <span style="color:#00f0ff">'+cBf+' u.c.</span>';
+  box.innerHTML = html;
+  box.className = 'result-box active';
+}
+
+function addLog(msg, cls) {
+  var box = document.getElementById('log');
+  var now = new Date();
+  var t   = ('0'+now.getMinutes()).slice(-2)+':'+('0'+now.getSeconds()).slice(-2);
+  var d   = document.createElement('div');
+  d.className = 'le';
+  d.innerHTML = '<span class="lt">'+t+'</span><span class="lm'+(cls?' l'+cls:'')+'">'+msg+'</span>';
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  while (box.children.length > 40) box.removeChild(box.firstChild);
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+(function init() {
+  S.dist = 1;
+  initCharges();
+  updateMeters();
+  updatePreview();
+  addLog('Simulador iniciado. Configure os objetos e pressione Encostar.', 'ev');
+})();
+</script>
+
+</body>
+</html>

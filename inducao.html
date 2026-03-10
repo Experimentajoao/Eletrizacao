@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Eletrização por Indução</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:     #030a10;
+  --panel:  #071018;
+  --card:   #0b1a28;
+  --cyan:   #00f0ff;
+  --yellow: #f5e200;
+  --pink:   #ff0060;
+  --green:  #00ff88;
+  --purple: #bb66ff;
+  --dim:    #1a3a50;
+  --muted:  #2a5060;
+  --text:   #d0f0ff;
+  --f1: 'Orbitron', monospace;
+  --f2: 'Share Tech Mono', monospace;
+}
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0 }
+body { background:var(--bg); color:var(--text); font-family:var(--f2); min-height:100vh }
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,240,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,240,255,.025) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+.page { max-width:1060px; margin:0 auto; padding:28px 16px 50px; position:relative; z-index:1 }
+.back { display:inline-block; font-family:var(--f1); font-size:10px; letter-spacing:3px; color:var(--muted); border:1px solid var(--dim); padding:6px 14px; border-radius:3px; text-decoration:none; margin-bottom:14px }
+.hdr-tag   { font-size:10px; letter-spacing:4px; color:var(--cyan); opacity:.7; margin-bottom:6px }
+.hdr-title { font-family:var(--f1); font-size:clamp(1.2rem,4vw,1.9rem); font-weight:900; letter-spacing:.06em; text-transform:uppercase; text-shadow:0 0 16px var(--cyan); margin-bottom:24px }
+.hdr-title span { color:var(--purple); text-shadow:0 0 16px var(--purple) }
+
+.grid { display:grid; grid-template-columns:1fr 300px; gap:16px }
+@media(max-width:740px){ .grid { grid-template-columns:1fr } }
+
+.cw { background:var(–panel); border:1px solid var(–dim); border-radius:6px; overflow:hidden; position:relative }
+#c  { display:block; width:100% }
+
+.hint { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); font-size:11px; letter-spacing:2px; color:var(–muted); pointer-events:none; white-space:nowrap; transition:opacity .4s }
+
+.phase-badge {
+position:absolute; top:12px; left:50%; transform:translateX(-50%);
+font-family:var(–f1); font-size:10px; letter-spacing:3px;
+padding:5px 16px; border-radius:3px; pointer-events:none;
+border:1px solid var(–dim); color:var(–muted); opacity:0;
+transition:opacity .3s;  white-space:nowrap;
+}
+.phase-badge.show    { opacity:1 }
+.phase-badge.app     { border-color:var(–purple); color:var(–purple) }
+.phase-badge.pol     { border-color:var(–yellow);  color:var(–yellow);  background:rgba(245,226,0,.06) }
+.phase-badge.gnd     { border-color:var(–green);   color:var(–green);   background:rgba(0,255,136,.06) }
+.phase-badge.rem     { border-color:var(–cyan);    color:var(–cyan) }
+.phase-badge.done    { border-color:var(–pink);    color:var(–pink);    background:rgba(255,0,96,.06) }
+
+.btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px }
+.btn  { font-family:var(–f1); font-size:10px; letter-spacing:2px; text-transform:uppercase; padding:10px 18px; border-radius:3px; cursor:pointer; background:transparent; transition:all .2s }
+.bp2  { color:var(–purple); border:1px solid var(–purple) }
+.bp2:hover { background:var(–purple); color:#000; box-shadow:0 0 12px var(–purple) }
+.bp2:disabled { opacity:.3; cursor:not-allowed }
+.by   { color:var(–yellow); border:1px solid var(–yellow) }
+.by:hover { background:var(–yellow); color:#000 }
+.bpi  { color:var(–pink);   border:1px solid var(–pink)   }
+.bpi:hover { background:var(–pink); color:#000 }
+.bc   { color:var(–cyan);   border:1px solid var(–cyan)   }
+.bc:hover { background:var(–cyan); color:#000 }
+
+.side { background:var(–panel); border:1px solid var(–dim); border-radius:6px; padding:18px; display:flex; flex-direction:column; gap:16px }
+.slbl { font-size:10px; letter-spacing:3px; color:var(–cyan); text-transform:uppercase; padding-bottom:7px; border-bottom:1px solid var(–dim) }
+
+.meters { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px }
+.meter  { background:var(–card); border:1px solid var(–dim); border-radius:5px; padding:10px; text-align:center; transition:border-color .4s }
+.mn { font-size:9px; letter-spacing:2px; color:var(–muted); margin-bottom:5px }
+.mv { font-family:var(–f1); font-size:1.3rem; font-weight:700 }
+.mu { font-size:9px; color:var(–muted); margin-top:2px }
+.bw2{ height:3px; background:var(–dim); border-radius:2px; margin-top:7px; overflow:hidden }
+.bb { height:100%; border-radius:2px; width:0%; transition:width .5s, background .5s }
+.pos { color:var(–yellow); text-shadow:0 0 8px var(–yellow) }
+.neg { color:var(–cyan);   text-shadow:0 0 8px var(–cyan)   }
+.neu { color:var(–muted) }
+
+.ctrl label { display:block; font-size:10px; letter-spacing:2px; color:var(–cyan); margin-bottom:6px }
+.sr { display:flex; align-items:center; gap:10px }
+input[type=range] { flex:1; -webkit-appearance:none; height:3px; border-radius:2px; background:var(–dim); outline:none; cursor:pointer }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:var(–cyan); box-shadow:0 0 6px var(–cyan) }
+.purple-thumb::-webkit-slider-thumb { background:var(–purple); box-shadow:0 0 6px var(–purple) }
+.sv  { font-size:13px; color:var(–cyan);   min-width:36px; text-align:right }
+.svp { font-size:13px; color:var(–purple); min-width:36px; text-align:right; font-family:var(–f1) }
+
+/* passos visuais */
+.steps { display:flex; flex-direction:column; gap:6px }
+.step-item {
+display:flex; align-items:center; gap:10px;
+padding:8px 10px; border-radius:4px;
+border:1px solid var(–dim); background:var(–card);
+font-size:11px; color:var(–muted);
+transition:border-color .3s, color .3s, background .3s;
+}
+.step-item.active  { border-color:var(–purple); color:var(–text);   background:rgba(187,102,255,.07) }
+.step-item.done    { border-color:var(–green);  color:var(–green);  background:rgba(0,255,136,.05) }
+.step-num { font-family:var(–f1); font-size:10px; min-width:18px; opacity:.6 }
+
+.result-box {
+background:var(–card); border:1px solid var(–dim); border-radius:4px;
+padding:11px 12px; font-size:11px; line-height:1.9; color:var(–muted);
+min-height:52px; transition:border-color .4s;
+}
+.result-box.active { border-color:var(–purple) }
+
+.log { background:var(–card); border:1px solid var(–dim); border-radius:4px; padding:9px; max-height:90px; overflow-y:auto; font-size:11px; line-height:1.8 }
+.log::-webkit-scrollbar { width:3px }
+.log::-webkit-scrollbar-thumb { background:var(–dim); border-radius:2px }
+.le { display:flex; gap:7px }
+.lt { color:var(–cyan); opacity:.6; flex-shrink:0 }
+.lm { color:var(–text) }
+.lev { color:var(–purple) }
+.lrs { color:var(–pink) }
+</style>
+
+</head>
+<body>
+<div class="page">
+  <a class="back" href="painel-eletrizacao.html">← VOLTAR</a>
+  <div class="hdr-tag">// SIM_03 · ELETROSTÁTICA</div>
+  <h1 class="hdr-title">Eletrização por <span>Indução</span></h1>
+
+  <div class="grid">
+    <div>
+      <div class="cw">
+        <canvas id="c"></canvas>
+        <div class="hint" id="hint">PRESSIONE INICIAR PARA COMEÇAR</div>
+        <div class="phase-badge" id="badge"></div>
+      </div>
+      <div class="btns">
+        <button class="btn bp2" id="btnNext" onclick="nextStep()">▶ Iniciar</button>
+        <button class="btn bpi" onclick="resetSim()">✕ Resetar</button>
+        <button class="btn bc"  onclick="toggleAuto()">↻ Auto</button>
+      </div>
+    </div>
+
+```
+<!-- LATERAL -->
+<div class="side">
+
+  <!-- Medidores -->
+  <div>
+    <div class="slbl">Carga do Condutor</div>
+    <div class="meters">
+      <div class="meter">
+        <div class="mn">LADO −</div>
+        <div class="mv neg" id="mvL">0</div>
+        <div class="mu">u.c.</div>
+        <div class="bw2"><div class="bb" id="bbL"></div></div>
+      </div>
+      <div class="meter">
+        <div class="mn">LADO +</div>
+        <div class="mv pos" id="mvR">0</div>
+        <div class="mu">u.c.</div>
+        <div class="bw2"><div class="bb" id="bbR"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Carga do bastão -->
+  <div class="ctrl">
+    <label style="color:var(--purple)">Carga do Bastão Indutor</label>
+    <div class="sr">
+      <input type="range" id="sRod" min="-20" max="20" value="-12"
+        class="purple-thumb" oninput="onRodChange()">
+      <span class="svp" id="vRod">-12</span>
+    </div>
+  </div>
+
+  <!-- Tamanho do condutor -->
+  <div class="ctrl">
+    <label>Tamanho do Condutor</label>
+    <div class="sr">
+      <input type="range" id="sCond" min="1" max="10" value="5"
+        oninput="document.getElementById('vCond').textContent=this.value">
+      <span class="sv" id="vCond">5</span>
+    </div>
+  </div>
+
+  <!-- Passos -->
+  <div>
+    <div class="slbl" style="margin-bottom:8px">Etapas do Processo</div>
+    <div class="steps">
+      <div class="step-item" id="s0"><span class="step-num">01</span>Aproximar o bastão do condutor</div>
+      <div class="step-item" id="s1"><span class="step-num">02</span>Polarização das cargas</div>
+      <div class="step-item" id="s2"><span class="step-num">03</span>Aterrar o condutor (terra)</div>
+      <div class="step-item" id="s3"><span class="step-num">04</span>Remover o aterramento</div>
+      <div class="step-item" id="s4"><span class="step-num">05</span>Afastar o bastão</div>
+    </div>
+  </div>
+
+  <!-- Resultado -->
+  <div>
+    <div class="slbl" style="margin-bottom:8px">Explicação</div>
+    <div class="result-box" id="resultBox">Aguardando início...</div>
+  </div>
+
+  <!-- Log -->
+  <div>
+    <div class="slbl" style="margin-bottom:8px">Log</div>
+    <div class="log" id="log"></div>
+  </div>
+
+</div>
+```
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// FASES DA INDUÇÃO
+// Cada fase tem texto explicativo e badge
+// ═══════════════════════════════════════════
+var FASES = [
+  {
+    badge:'APROXIMANDO...', bcls:'app',
+    step:0,
+    explain:'O bastão carregado se aproxima do condutor neutro.<br>Ainda <b style="color:#d0f0ff">sem contato</b> — apenas o campo elétrico atua.'
+  },
+  {
+    badge:'POLARIZAÇÃO', bcls:'pol',
+    step:1,
+    explain:'O campo do bastão <b style="color:#f5e200">repele</b> cargas semelhantes e <b style="color:#00f0ff">atrai</b> cargas opostas.<br>O condutor se polariza — um lado fica − e o outro +.'
+  },
+  {
+    badge:'ATERRAMENTO', bcls:'gnd',
+    step:2,
+    explain:'O condutor é <b style="color:#00ff88">aterrado</b>.<br>Elétrons em excesso escapam para a terra, atraídos pelo bastão positivo ou repelidos pelo negativo.'
+  },
+  {
+    badge:'TERRA REMOVIDO', bcls:'rem',
+    step:3,
+    explain:'O aterramento é removido.<br>O condutor fica com <b style="color:#d0f0ff">carga líquida não-nula</b>, presa pela influência do bastão.'
+  },
+  {
+    badge:'BASTÃO AFASTADO', bcls:'done',
+    step:4,
+    explain:'O bastão é afastado.<br>As cargas se redistribuem — o condutor fica <b style="color:#d0f0ff">eletrizado com sinal oposto</b> ao do bastão!'
+  }
+];
+
+// ═══════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════
+var S = {
+  fase:   -1,       // fase atual (-1 = idle)
+  // posição do bastão: 0=longe, 1=próximo
+  rodX:   0,        // 0=longe, 1=perto
+  rodDir: 0,        // -1 afastando, 1 aproximando, 0 parado
+  // cargas do condutor (lado esquerdo e direito)
+  chargeL: 0,
+  chargeR: 0,
+
+  // flag de aterramento e bastão afastado
+  grounded:  false,
+  separated: false,
+
+  // animação
+  elec:[], sparks:[], labs:[],
+  glowRod:0, glowCond:0,
+  fieldLines: [],   // linhas de campo animadas
+  autoOn:false, autoTimer:null
+};
+
+// ═══════════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════════
+var cv = document.getElementById('c');
+var cx = cv.getContext('2d');
+
+function resize() {
+  var wrap = cv.parentElement;
+  var w = wrap.getBoundingClientRect().width;
+  if (!w || w < 10) w = document.documentElement.clientWidth - 32;
+  cv.width  = Math.floor(w);
+  cv.height = Math.min(380, Math.max(260, Math.floor(w * 0.46)));
+}
+resize();
+setTimeout(resize, 50);
+setTimeout(resize, 200);
+setTimeout(resize, 600);
+window.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+function getRodCharge() { return parseInt(document.getElementById('sRod').value); }
+function getCondSize()  { return parseInt(document.getElementById('sCond').value); }
+function lerp(a,b,t)   { return a + (b-a)*t; }
+function clamp(v,a,b)  { return v<a?a:v>b?b:v; }
+
+// ═══════════════════════════════════════════
+// GEOMETRIA
+// ═══════════════════════════════════════════
+function getGeom() {
+  var W    = cv.width;
+  var H    = cv.height;
+  var cy2  = H / 2;
+  var siz  = getCondSize();
+  var cw   = 60 + siz * 16;
+  var ch   = 40 + siz * 6;
+  var cx2  = W * 0.58;
+
+  var rodLen = 60 + Math.abs(getRodCharge()) * 1.5;
+  var rodH   = 18;
+
+  // gap mínimo fixo de 30px entre a ponta do bastão e o condutor
+  var GAP_MIN = 30;
+  var rodFar  = W * 0.04;
+  var rodNear = cx2 - cw/2 - rodLen - GAP_MIN;
+  if (rodNear < rodFar + 10) rodNear = rodFar + 10;
+
+  var rx = lerp(rodFar, rodNear, S.rodX);
+
+  return {
+    W:W, H:H, cy:cy2,
+    cx:cx2, cw:cw, ch:ch,
+    rx:rx, ry:cy2, rodLen:rodLen, rodH:rodH
+  };
+}
+
+// ═══════════════════════════════════════════
+// DESENHO — retângulo arredondado
+// ═══════════════════════════════════════════
+function rrect(x,y,w,h,r) {
+  r = clamp(r, 0, Math.min(w,h)/2);
+  cx.beginPath();
+  cx.moveTo(x+r,y); cx.lineTo(x+w-r,y);
+  cx.quadraticCurveTo(x+w,y,   x+w,y+r);
+  cx.lineTo(x+w,y+h-r);
+  cx.quadraticCurveTo(x+w,y+h, x+w-r,y+h);
+  cx.lineTo(x+r,y+h);
+  cx.quadraticCurveTo(x,y+h,   x,y+h-r);
+  cx.lineTo(x,y+r);
+  cx.quadraticCurveTo(x,y,     x+r,y);
+  cx.closePath();
+}
+
+// ═══════════════════════════════════════════
+// DESENHO — BASTÃO INDUTOR
+// ═══════════════════════════════════════════
+function drawRod(g) {
+  var rc   = getRodCharge();
+  var absC = rc < 0 ? -rc : rc;
+  var col  = rc > 0 ? '#f5e200' : rc < 0 ? '#bb66ff' : '#335566';
+
+  // corpo
+  rrect(g.rx, g.ry - g.rodH/2, g.rodLen, g.rodH, 5);
+  var rg = cx.createLinearGradient(g.rx, g.ry-g.rodH/2, g.rx, g.ry+g.rodH/2);
+  rg.addColorStop(0, 'rgba(60,20,80,0.95)');
+  rg.addColorStop(1, 'rgba(30,10,50,0.95)');
+  cx.fillStyle = rg; cx.fill();
+
+  // borda — sombra fixa, sem variação
+  rrect(g.rx, g.ry - g.rodH/2, g.rodLen, g.rodH, 5);
+  cx.strokeStyle = col; cx.lineWidth = 1.5;
+  cx.shadowColor = col; cx.shadowBlur = 6;
+  cx.stroke(); cx.shadowBlur = 0;
+
+  // sinais ao longo do bastão
+  cx.font = 'bold 11px Orbitron, monospace';
+  cx.fillStyle = col; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  cx.shadowColor = col; cx.shadowBlur = 4;
+  var sign = rc >= 0 ? '+' : '-';
+  var i;
+  for (i = 0; i < 4; i++) {
+    cx.fillText(sign, g.rx + g.rodLen*0.15 + i*(g.rodLen*0.23), g.ry);
+  }
+  cx.shadowBlur = 0;
+
+  // label
+  cx.font = '9px Share Tech Mono, monospace';
+  cx.fillStyle = 'rgba(200,200,255,0.4)';
+  cx.fillText('BASTAO', g.rx + g.rodLen/2, g.ry - g.rodH/2 - 8);
+}
+
+// ═══════════════════════════════════════════
+// DESENHO — CONDUTOR
+// ═══════════════════════════════════════════
+function drawConductor(g) {
+  var rc    = getRodCharge();
+  var phase = S.fase;
+
+  // determina distribuição de carga visual
+  var showPol   = phase >= 1;       // mostrar polarização
+  var showGnd   = phase === 2;      // mostrar aterramento
+  var showFinal = phase >= 4;       // mostrar carga final
+
+  // halo removido — sem pulso visual
+
+  // corpo — gradiente mostrando polarização
+  rrect(g.cx - g.cw/2, g.cy - g.ch/2, g.cw, g.ch, 8);
+  var bodyGrad = cx.createLinearGradient(g.cx - g.cw/2, g.cy, g.cx + g.cw/2, g.cy);
+  if (showPol && !showFinal) {
+    var lc = rc < 0 ? 'rgba(0,180,255,0.35)' : 'rgba(245,226,0,0.35)';
+    var rc2 = rc < 0 ? 'rgba(245,226,0,0.35)' : 'rgba(0,180,255,0.35)';
+    bodyGrad.addColorStop(0,   lc);
+    bodyGrad.addColorStop(0.5, 'rgba(15,40,65,0.95)');
+    bodyGrad.addColorStop(1,   rc2);
+  } else if (showFinal) {
+    var finalC = rc < 0 ? 'rgba(245,226,0,0.4)' : 'rgba(0,180,255,0.4)';
+    bodyGrad.addColorStop(0,   finalC);
+    bodyGrad.addColorStop(0.5, finalC);
+    bodyGrad.addColorStop(1,   finalC);
+  } else {
+    bodyGrad.addColorStop(0,   'rgba(15,40,65,0.95)');
+    bodyGrad.addColorStop(1,   'rgba(15,40,65,0.95)');
+  }
+  cx.fillStyle = bodyGrad; cx.fill();
+
+  // grade interna
+  cx.save();
+  rrect(g.cx-g.cw/2, g.cy-g.ch/2, g.cw, g.ch, 8);
+  cx.clip();
+  cx.strokeStyle = 'rgba(0,200,255,0.07)'; cx.lineWidth = 0.8;
+  var i;
+  for (i = g.cx-g.cw/2; i < g.cx+g.cw/2; i+=10) {
+    cx.beginPath(); cx.moveTo(i, g.cy-g.ch/2); cx.lineTo(i, g.cy+g.ch/2); cx.stroke();
+  }
+  cx.restore();
+
+  // borda
+  rrect(g.cx-g.cw/2, g.cy-g.ch/2, g.cw, g.ch, 8);
+  var bCol = showFinal ? (rc<0?'#f5e200':'#00f0ff') : showPol ? '#bb66ff' : 'rgba(0,200,255,0.25)';
+  cx.strokeStyle = bCol; cx.lineWidth = 1.5;
+  cx.shadowColor = bCol; cx.shadowBlur = 5;
+  cx.stroke(); cx.shadowBlur = 0;
+
+  // sinais de carga polarizada
+  if (showPol && !showFinal) {
+    var signL = rc < 0 ? '-' : '+';
+    var signR = rc < 0 ? '+' : '-';
+    var colL  = rc < 0 ? '#00f0ff' : '#f5e200';
+    var colR  = rc < 0 ? '#f5e200' : '#00f0ff';
+    cx.font = 'bold 13px Orbitron, monospace';
+    cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.fillStyle = colL; cx.shadowColor = colL; cx.shadowBlur = 8;
+    cx.fillText(signL, g.cx - g.cw/2 + 14, g.cy);
+    cx.fillStyle = colR; cx.shadowColor = colR;
+    cx.fillText(signR, g.cx + g.cw/2 - 14, g.cy);
+    cx.shadowBlur = 0;
+  }
+
+  // carga final redistribuída
+  if (showFinal) {
+    var finalSign = rc < 0 ? '+' : '-';
+    var finalCol  = rc < 0 ? '#f5e200' : '#00f0ff';
+    cx.font = 'bold 16px Orbitron, monospace';
+    cx.fillStyle = finalCol; cx.shadowColor = finalCol; cx.shadowBlur = 10;
+    cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.fillText(finalSign, g.cx, g.cy);
+    cx.shadowBlur = 0;
+    // label da carga
+    var finalVal = rc < 0 ? '+'+S.chargeR : ''+S.chargeL;
+    cx.font = '10px Share Tech Mono, monospace';
+    cx.fillStyle = finalCol;
+    cx.fillText(finalVal+' u.c.', g.cx, g.cy + g.ch/2 - 10);
+  }
+
+  // label CONDUTOR
+  cx.font = '9px Share Tech Mono, monospace';
+  cx.fillStyle = 'rgba(200,200,255,0.4)';
+  cx.textAlign = 'center';
+  cx.fillText('CONDUTOR', g.cx, g.cy - g.ch/2 - 8);
+
+  // fio de aterramento
+  if (showGnd) {
+    var gx = g.cx + g.cw/2 + 10;
+    var gy = g.cy;
+    cx.strokeStyle = '#00ff88'; cx.lineWidth = 2;
+    cx.shadowColor = '#00ff88'; cx.shadowBlur = 8;
+    cx.beginPath();
+    cx.moveTo(gx, gy);
+    cx.lineTo(gx + 28, gy);
+    cx.lineTo(gx + 28, gy + 26);
+    cx.stroke();
+    // símbolo terra
+    var gnd = [[0,0],[18,0],[-18,0],[5,7],[13,7],[-13,7],[9,14],[1,14],[-9,14]];
+    var tx = gx+28, ty = gy+26;
+    cx.beginPath();
+    cx.moveTo(tx-18, ty); cx.lineTo(tx+18, ty); cx.stroke();
+    cx.beginPath();
+    cx.moveTo(tx-13, ty+7); cx.lineTo(tx+13, ty+7); cx.stroke();
+    cx.beginPath();
+    cx.moveTo(tx-7, ty+14); cx.lineTo(tx+7, ty+14); cx.stroke();
+    cx.shadowBlur = 0;
+
+    // seta de elétrons saindo/entrando
+    cx.globalAlpha = 0.7 + 0.3*Math.sin(Date.now()*0.006);
+    cx.fillStyle = '#00ff88';
+    cx.font = '12px Share Tech Mono, monospace';
+    cx.textAlign = 'center';
+    cx.fillText(rc < 0 ? '→e⁻' : '←e⁻', gx+14, gy - 12);
+    cx.globalAlpha = 1;
+  }
+}
+
+// ═══════════════════════════════════════════
+// LINHAS DE CAMPO (fase 1 e 2)
+// ═══════════════════════════════════════════
+function drawFieldLines(g) {
+  if (S.fase < 1 || S.fase > 3) return;
+  var rc   = getRodCharge();
+  if (rc === 0) return;
+  var absC = rc < 0 ? -rc : rc;
+  var alpha = clamp(absC / 20, 0, 1) * 0.35;
+  var col  = rc < 0 ? '#bb66ff' : '#f5e200';
+  var rodTipX = g.rx + g.rodLen;
+  var condL   = g.cx - g.cw/2;
+  var rows = 4;
+  var i;
+  for (i = 0; i < rows; i++) {
+    var t   = (i+0.5) / rows;
+    var y   = g.cy - g.ch/2 + t * g.ch;
+    cx.globalAlpha = alpha;
+    cx.strokeStyle = col; cx.lineWidth = 1;
+    cx.setLineDash([4,5]);
+    cx.beginPath(); cx.moveTo(rodTipX, g.ry); cx.lineTo(condL, y); cx.stroke();
+    cx.setLineDash([]);
+    // seta no meio
+    var mx = (rodTipX + condL)/2;
+    var my = (g.ry + y)/2;
+    var dx = condL - rodTipX; var dy = y - g.ry;
+    var d  = Math.sqrt(dx*dx+dy*dy)||1;
+    var nx = dx/d*6; var ny = dy/d*6;
+    if (rc > 0) { nx=-nx; ny=-ny; }
+    cx.fillStyle = col;
+    cx.beginPath();
+    cx.moveTo(mx+nx, my+ny);
+    cx.lineTo(mx-ny*0.5, my+nx*0.5);
+    cx.lineTo(mx+ny*0.5, my-nx*0.5);
+    cx.fill();
+  }
+  cx.globalAlpha = 1;
+}
+
+// ═══════════════════════════════════════════
+// PARTÍCULAS
+// ═══════════════════════════════════════════
+function drawParticles() {
+  var i, e, sp, lb, a;
+  for (i=0; i<S.elec.length; i++) {
+    e = S.elec[i]; a = clamp(e.life/e.ml, 0, 1);
+    cx.globalAlpha = a;
+    cx.fillStyle = e.c || '#00f0ff';
+    cx.shadowColor = e.c || '#00f0ff'; cx.shadowBlur = 8;
+    cx.beginPath(); cx.arc(e.x, e.y, 4*a+1, 0, 6.2832); cx.fill();
+  }
+  for (i=0; i<S.sparks.length; i++) {
+    sp = S.sparks[i]; a = clamp(sp.life/sp.ml, 0, 1);
+    cx.globalAlpha = a;
+    cx.strokeStyle = '#f5e200'; cx.lineWidth = a*2;
+    cx.shadowColor = '#f5e200'; cx.shadowBlur = 5;
+    cx.beginPath(); cx.moveTo(sp.x, sp.y);
+    cx.lineTo(sp.x+sp.vx*5, sp.y+sp.vy*5); cx.stroke();
+  }
+  for (i=0; i<S.labs.length; i++) {
+    lb = S.labs[i]; a = clamp(lb.life/lb.ml, 0, 1);
+    cx.globalAlpha = a;
+    cx.fillStyle = lb.c; cx.shadowColor = lb.c; cx.shadowBlur = 10;
+    cx.font = 'bold '+lb.sz+'px Orbitron, monospace';
+    cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.fillText(lb.t, lb.x, lb.y);
+  }
+  cx.globalAlpha = 1; cx.shadowBlur = 0;
+}
+
+// ═══════════════════════════════════════════
+// LOOP
+// ═══════════════════════════════════════════
+var lastT = 0;
+var lastW = 0;
+
+function loop(ts) {
+  var curW = cv.parentElement.getBoundingClientRect().width;
+  if (curW > 10 && Math.abs(curW - lastW) > 1) { lastW = curW; resize(); }
+
+  var dt = lastT ? (ts-lastT)/16.67 : 1;
+  if (dt > 3) dt = 3;
+  lastT = ts;
+  var step = dt;
+
+  // fundo
+  cx.fillStyle = '#030a10'; cx.fillRect(0,0,cv.width,cv.height);
+  cx.strokeStyle = 'rgba(0,200,220,.04)'; cx.lineWidth = 1;
+  var x, y;
+  for (x=0; x<cv.width; x+=38){ cx.beginPath(); cx.moveTo(x,0); cx.lineTo(x,cv.height); cx.stroke(); }
+  for (y=0; y<cv.height; y+=38){ cx.beginPath(); cx.moveTo(0,y); cx.lineTo(cv.width,y); cx.stroke(); }
+
+  // mover bastão com ease-out (desacelera ao chegar perto)
+  if (S.rodDir !== 0) {
+    var target = S.rodDir > 0 ? 1 : 0;
+    var diff   = target - S.rodX;
+    // velocidade proporcional à distância restante — para suave
+    S.rodX += diff * 0.06 * step;
+    // considera chegou quando está muito perto
+    if (Math.abs(diff) < 0.008) {
+      S.rodX   = target;
+      S.rodDir = 0;
+      onRodMoved();
+    }
+  }
+
+  var g = getGeom();
+  drawFieldLines(g);
+  drawRod(g);
+  drawConductor(g);
+  drawParticles();
+
+  // decaimentos
+  // partículas
+  var i;
+  for (i=S.elec.length-1; i>=0; i--){
+    S.elec[i].x+=S.elec[i].vx*step; S.elec[i].y+=S.elec[i].vy*step;
+    S.elec[i].life-=step;
+    if(S.elec[i].life<=0) S.elec.splice(i,1);
+  }
+  for (i=S.sparks.length-1; i>=0; i--){
+    S.sparks[i].x+=S.sparks[i].vx*step; S.sparks[i].y+=S.sparks[i].vy*step;
+    S.sparks[i].vy+=0.15*step; S.sparks[i].life-=step;
+    if(S.sparks[i].life<=0) S.sparks.splice(i,1);
+  }
+  for (i=S.labs.length-1; i>=0; i--){
+    S.labs[i].y-=0.4*step; S.labs[i].life-=step;
+    if(S.labs[i].life<=0) S.labs.splice(i,1);
+  }
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ═══════════════════════════════════════════
+// LÓGICA DAS FASES
+// ═══════════════════════════════════════════
+function nextStep() {
+  S.fase++;
+  if (S.fase >= FASES.length) { resetSim(); return; }
+
+  var f = FASES[S.fase];
+  setBadge(f.badge, f.bcls);
+  setExplain(f.explain);
+  updateSteps(f.step);
+  document.getElementById('hint').style.opacity = '0';
+
+  var btn = document.getElementById('btnNext');
+
+  if (S.fase === 0) {
+    // Fase 0 — bastão se aproxima suavemente
+    S.rodDir = 1;
+    btn.disabled = true;
+    addLog('Aproximando o bastão carregado.', 'ev');
+
+  } else if (S.fase === 1) {
+    // Fase 1 — polarização
+    applyPolarization();
+    btn.disabled = false;
+    btn.textContent = '▶ Aterrar';
+    addLog('Polarização ocorrendo. Pressione para aterrar.', 'ev');
+
+  } else if (S.fase === 2) {
+    // Fase 2 — aterramento
+    S.grounded = true;
+    applyGrounding();
+    btn.disabled = false;
+    btn.textContent = '▶ Remover Terra';
+    addLog('Condutor aterrado. Elétrons fluem.', 'ev');
+
+  } else if (S.fase === 3) {
+    // Fase 3 — remover aterramento
+    S.grounded = false;
+    btn.disabled = false;
+    btn.textContent = '▶ Afastar Bastão';
+    addLog('Aterramento removido. Carga presa.', 'ev');
+
+  } else if (S.fase === 4) {
+    // Fase 4 — bastão se afasta suavemente
+    S.rodDir = -1;
+    btn.disabled = true;
+    addLog('Afastando o bastão...', 'ev');
+  }
+
+  updateMeters();
+}
+
+// chamado quando o bastão terminou de se mover
+function onRodMoved() {
+  var btn = document.getElementById('btnNext');
+  if (S.fase === 0) {
+    // chegou perto — polarização gradual, sem explosão
+    S.fase = 1;
+    var f = FASES[1];
+    setBadge(f.badge, f.bcls);
+    setExplain(f.explain);
+    updateSteps(f.step);
+    applyPolarization();
+    btn.disabled = false;
+    btn.textContent = '▶ Aterrar';
+    addLog('Bastão próximo. Polarização ocorrendo.', 'ev');
+
+  } else if (S.fase === 4) {
+    // afastou — resultado final suave
+    applyFinalCharge();
+    setBadge('ELETRIZADO!', 'done');
+    btn.textContent = '↺ Repetir';
+    btn.disabled = false;
+    updateMeters();
+    spawnFinalEffect();
+    addLog('Bastão afastado. Condutor eletrizado com sinal contrário ao bastão!', 'ev');
+  }
+}
+
+// ═══════════════════════════════════════════
+// FÍSICA DA INDUÇÃO
+// ═══════════════════════════════════════════
+function applyPolarization() {
+  var rc   = getRodCharge();
+  var siz  = getCondSize();
+  var pol  = Math.round(Math.abs(rc) * 0.6 * (siz / 5));
+  pol = clamp(pol, 1, 15);
+
+  if (rc < 0) {
+    // bastão −: lado perto fica + (perde e⁻), lado longe fica −
+    S.chargeL = pol;   // lado esquerdo (perto do bastão) fica +
+    S.chargeR = -pol;  // lado direito fica −
+  } else {
+    S.chargeL = -pol;
+    S.chargeR = pol;
+  }
+  S.glowCond = 0.3;   // suave
+  spawnPolarizationParticles();
+  updateMeters();
+}
+
+function applyGrounding() {
+  var rc  = getRodCharge();
+  var g   = getGeom();
+  // elétrons saem pelo lado direito para a terra (se bastão −)
+  // ou entram do lado direito (se bastão +)
+  var n   = 8;
+  var i;
+  for (i=0; i<n; i++) {
+    var sx  = g.cx + g.cw/2;
+    var sy  = g.cy + (Math.random()-0.5)*g.ch*0.7;
+    var tx  = g.cx + g.cw/2 + 40 + Math.random()*20;
+    var ty  = g.cy + 30 + Math.random()*20;
+    var dx  = tx-sx; var dy = ty-sy;
+    var d   = Math.sqrt(dx*dx+dy*dy)||1;
+    var sp  = 1.5 + Math.random()*1.5;
+    var lf  = d/sp + 8;
+    var ec  = rc < 0 ? '#00f0ff' : '#f5e200';
+    if (rc > 0) {
+      // sentido inverso — entram
+      S.elec.push({x:tx,y:ty,vx:-dx/d*sp,vy:-dy/d*sp,life:lf,ml:lf,c:ec});
+    } else {
+      S.elec.push({x:sx,y:sy,vx:dx/d*sp,vy:dy/d*sp,life:lf,ml:lf,c:ec});
+    }
+  }
+  // após aterramento o lado "livre" se neutraliza
+  if (rc < 0) { S.chargeR = 0; } else { S.chargeL = 0; }
+  S.glowCond = 0.35;
+  updateMeters();
+}
+
+function applyFinalCharge() {
+  var rc  = getRodCharge();
+  var siz = getCondSize();
+  var q   = Math.round(Math.abs(rc) * 0.5 * (siz/5));
+  q = clamp(q, 1, 12);
+  if (rc < 0) {
+    S.chargeL = q; S.chargeR = q;
+  } else {
+    S.chargeL = -q; S.chargeR = -q;
+  }
+  S.glowCond = 0.4;
+  updateMeters();
+}
+
+// ═══════════════════════════════════════════
+// EFEITOS VISUAIS
+// ═══════════════════════════════════════════
+function spawnPolarizationParticles() {
+  var g   = getGeom();
+  var rc  = getRodCharge();
+  var col = '#00f0ff';
+  var n   = 6;
+  var i;
+  // elétrons migrando devagar de um lado ao outro — velocidade baixa
+  for (i=0; i<n; i++) {
+    var sx = g.cx + (Math.random()-0.5)*g.cw*0.5;
+    var sy = g.cy + (Math.random()-0.5)*g.ch*0.5;
+    var tx = rc < 0 ? g.cx + g.cw*0.38 : g.cx - g.cw*0.38;
+    var dx = tx - sx + (Math.random()-0.5)*10;
+    var dy = (Math.random()-0.5)*14;
+    var d  = Math.sqrt(dx*dx+dy*dy)||1;
+    var sp = 0.4 + Math.random()*0.5;   // bem devagar
+    var lf = d/sp + 10;
+    S.elec.push({x:sx, y:sy, vx:dx/d*sp, vy:dy/d*sp, life:lf, ml:lf, c:col});
+  }
+}
+
+function spawnFinalEffect() {
+  var g   = getGeom();
+  var rc  = getRodCharge();
+  var col = rc < 0 ? '#f5e200' : '#00f0ff';
+  // apenas label flutuante suave — sem faíscas
+  var sign = rc < 0 ? '+' : '-';
+  S.labs.push({x:g.cx, y:g.cy-10, t:sign, c:col, sz:20, life:90, ml:90});
+}
+
+// ═══════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════
+function resetSim() {
+  S.fase = -1; S.rodX = 0; S.rodDir = 0;
+  S.chargeL = 0; S.chargeR = 0;
+  S.grounded = false; S.separated = false;
+  S.elec=[]; S.sparks=[]; S.labs=[];
+  S.glowRod=0; S.glowCond=0;
+  if (S.autoOn) { S.autoOn=false; clearTimeout(S.autoTimer); }
+
+  var btn = document.getElementById('btnNext');
+  btn.textContent = '▶ Iniciar';
+  btn.disabled = false;
+  document.getElementById('hint').style.opacity = '1';
+  setBadge('','');
+  document.getElementById('resultBox').textContent = 'Aguardando início...';
+  document.getElementById('resultBox').className = 'result-box';
+  for (var i=0; i<5; i++) setStepState(i,'');
+  updateMeters();
+  addLog('Simulação resetada.','rs');
+}
+
+function toggleAuto() {
+  S.autoOn = !S.autoOn;
+  if (S.autoOn) {
+    addLog('Modo automático ATIVADO.','ev');
+    autoRun();
+  } else {
+    clearTimeout(S.autoTimer);
+    addLog('Modo automático desativado.','ev');
+  }
+}
+
+function autoRun() {
+  if (!S.autoOn) return;
+  if (S.fase === -1) {
+    nextStep();
+    S.autoTimer = setTimeout(autoRun, 3000);
+  } else if (S.fase < 4) {
+    nextStep();
+    S.autoTimer = setTimeout(autoRun, 2200);
+  } else if (S.fase === 4) {
+    // aguarda bastão se afastar
+    S.autoTimer = setTimeout(function() {
+      if (!S.autoOn) return;
+      resetSim();
+      S.autoTimer = setTimeout(autoRun, 1200);
+    }, 3000);
+  }
+}
+
+// ═══════════════════════════════════════════
+// UI
+// ═══════════════════════════════════════════
+function updateMeters() {
+  function setM(vid, bid, charge, signed) {
+    var el = document.getElementById(vid);
+    el.textContent = signed ? (charge>=0?'+'+charge:''+charge) : Math.abs(charge)+'';
+    el.className = 'mv '+(charge>0?'pos':charge<0?'neg':'neu');
+    var b = document.getElementById(bid);
+    b.style.width = Math.min(100, Math.abs(charge)/15*100)+'%';
+    b.style.background = charge>0 ? '#f5e200' : '#00f0ff';
+  }
+  setM('mvL','bbL', S.chargeL, true);
+  setM('mvR','bbR', S.chargeR, true);
+}
+
+function setStepState(i, state) {
+  var el = document.getElementById('s'+i);
+  if (!el) return;
+  el.className = 'step-item' + (state ? ' '+state : '');
+}
+
+function updateSteps(current) {
+  var i;
+  for (i=0; i<5; i++) {
+    if (i < current)      setStepState(i, 'done');
+    else if (i===current) setStepState(i, 'active');
+    else                  setStepState(i, '');
+  }
+}
+
+function setBadge(text, cls) {
+  var b = document.getElementById('badge');
+  b.textContent = text;
+  b.className = 'phase-badge'+(text?' show '+cls:'');
+}
+
+function setExplain(html) {
+  var box = document.getElementById('resultBox');
+  box.innerHTML = html;
+  box.className = 'result-box active';
+}
+
+function onRodChange() {
+  var v = parseInt(document.getElementById('sRod').value);
+  document.getElementById('vRod').textContent = v>=0?'+'+v:''+v;
+  if (S.fase === -1) { resetSim(); }
+}
+
+function addLog(msg, cls) {
+  var box = document.getElementById('log');
+  var now = new Date();
+  var t = ('0'+now.getMinutes()).slice(-2)+':'+('0'+now.getSeconds()).slice(-2);
+  var d = document.createElement('div');
+  d.className = 'le';
+  d.innerHTML = '<span class="lt">'+t+'</span><span class="lm'+(cls?' l'+cls:'')+'">'+msg+'</span>';
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  while (box.children.length>40) box.removeChild(box.firstChild);
+}
+
+// INIT
+(function() {
+  updateMeters();
+  addLog('Simulador de indução pronto. Pressione Iniciar.','ev');
+})();
+</script>
+
+</body>
+</html>
