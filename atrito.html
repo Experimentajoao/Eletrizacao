@@ -78,7 +78,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; h
 </head>
 <body>
 <div class="page">
-  <a class="back" href="painel-eletrizacao.html">← VOLTAR</a>
+  <a class="back" href="index.html">← VOLTAR</a>
   <div class="hdr-tag">// SIM_01 · ELETROSTÁTICA</div>
   <h1 class="hdr-title">Eletrização por <span>Atrito</span></h1>
 
@@ -95,7 +95,6 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; h
       </div>
     </div>
 
-```
 <div class="side">
   <div>
     <div class="slbl">Carga Elétrica</div>
@@ -120,7 +119,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; h
     <select id="selA" onchange="onMat()">
       <option value="glass">Vidro</option>
       <option value="fur">Pele de Animal</option>
-      <option value="wool">La</option>
+      <option value="wool">Lã</option>
       <option value="nylon">Nylon</option>
       <option value="paper">Papel</option>
       <option value="rubber">Borracha</option>
@@ -132,11 +131,11 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; h
     <label>Material B (inferior)</label>
     <select id="selB" onchange="onMat()">
       <option value="silk">Seda</option>
-      <option value="wool">La</option>
+      <option value="wool">Lã</option>
       <option value="fur">Pele de Animal</option>
       <option value="rubber" selected>Borracha</option>
-      <option value="plastic">Plastico</option>
-      <option value="amber">Ambar</option>
+      <option value="plastic">Plástico</option>
+      <option value="amber">Âmbar</option>
     </select>
     <div class="mdesc" id="dB"></div>
   </div>
@@ -150,7 +149,7 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; h
   </div>
 
   <div class="ctrl">
-    <label>Velocidade da Animacao</label>
+    <label>Velocidade da Animação</label>
     <div class="sr">
       <input type="range" id="sS" min="1" max="10" value="5" oninput="document.getElementById('vS').textContent=this.value">
       <span class="sv" id="vS">5</span>
@@ -162,7 +161,6 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; h
     <div class="log" id="log"></div>
   </div>
 </div>
-```
 
   </div>
 </div>
@@ -170,15 +168,15 @@ input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; h
 <script>
 // ═══ MATERIAIS ═══
 var MAT = {
-  glass:   {name:'Vidro',       tv:8,  col:'#88ccee', desc:'Cede eletrons com facilidade.'},
-  fur:     {name:'Pele Animal', tv:7,  col:'#c8a050', desc:'Alta tendencia a ceder eletrons.'},
-  wool:    {name:'La',          tv:6,  col:'#e8d060', desc:'Perde eletrons para a maioria dos materiais.'},
-  nylon:   {name:'Nylon',       tv:5,  col:'#80ccff', desc:'Posicao intermediaria na serie.'},
+  glass:   {name:'Vidro',       tv:8,  col:'#88ccee', desc:'Cede elétrons com facilidade.'},
+  fur:     {name:'Pele Animal', tv:7,  col:'#c8a050', desc:'Alta tendência a ceder elétrons.'},
+  wool:    {name:'Lã',          tv:6,  col:'#e8d060', desc:'Perde elétrons para a maioria dos materiais.'},
+  nylon:   {name:'Nylon',       tv:5,  col:'#80ccff', desc:'Posição intermediária na série.'},
   silk:    {name:'Seda',        tv:4,  col:'#ffb8d0', desc:'Pode ceder ou receber dependendo do par.'},
-  paper:   {name:'Papel',       tv:3,  col:'#e8e8d0', desc:'Posicao intermediaria.'},
-  rubber:  {name:'Borracha',    tv:1,  col:'#445566', desc:'Forte tendencia a receber eletrons.'},
-  plastic: {name:'Plastico',    tv:0,  col:'#6688cc', desc:'Excelente receptor de eletrons.'},
-  amber:   {name:'Ambar',       tv:-1, col:'#cc6010', desc:'Maxima tendencia a receber eletrons.'}
+  paper:   {name:'Papel',       tv:3,  col:'#e8e8d0', desc:'Posição intermediária.'},
+  rubber:  {name:'Borracha',    tv:1,  col:'#445566', desc:'Forte tendência a receber elétrons.'},
+  plastic: {name:'Plástico',    tv:0,  col:'#6688cc', desc:'Excelente receptor de elétrons.'},
+  amber:   {name:'Âmbar',       tv:-1, col:'#cc6010', desc:'Máxima tendência a receber elétrons.'}
 };
 
 // ═══ ESTADO ═══
@@ -570,8 +568,8 @@ function doRub() {
   var kA   = document.getElementById('selA').value;
   var kB   = document.getElementById('selB').value;
   var diff = MAT[kA].tv - MAT[kB].tv;
-  if (diff === 0) { addLog('Mesma posicao triboeletrica — sem transferencia.','ev'); return; }
-  if (Math.abs(S.cA) >= S.MAX) { addLog('Carga maxima atingida!','ev'); return; }
+  if (diff === 0) { addLog('Mesma posição triboelétrica — sem transferência.','ev'); return; }
+  if (Math.abs(S.cA) >= S.MAX) { addLog('Carga máxima atingida!','ev'); return; }
 
   var amt = Math.ceil(Math.abs(diff)*getInt()/8);
   if (amt < 1) amt = 1;
@@ -628,12 +626,12 @@ function toggleAuto() {
     btn.className = 'btn bp';
     document.getElementById('hint').style.opacity = '0';
     S.autoTimer = setInterval(function(){ if (!S.rubbing) startRub(); }, 1000);
-    addLog('Modo automatico ATIVADO.','ev');
+    addLog('Modo automático ATIVADO.','ev');
   } else {
     btn.textContent = '↻ Auto';
     btn.className = 'btn by';
     clearInterval(S.autoTimer);
-    addLog('Modo automatico desativado.','ev');
+    addLog('Modo automático desativado.','ev');
   }
 }
 
@@ -645,7 +643,7 @@ function resetSim() {
   document.getElementById('btnRub').disabled = false;
   document.getElementById('hint').style.opacity = '1';
   updateUI();
-  addLog('Simulacao resetada.','rs');
+  addLog('Simulação resetada.','rs');
 }
 
 // ═══ UI ═══
@@ -672,7 +670,7 @@ function updateUI() {
 function updateDesc() {
   var kA = document.getElementById('selA').value;
   var kB = document.getElementById('selB').value;
-  function tend(tv) { return tv>=4 ? '<span style="color:#f5e200">&#8593; Cede eletrons (fica +)</span>' : '<span style="color:#00f0ff">&#8595; Recebe eletrons (fica -)</span>'; }
+  function tend(tv) { return tv>=4 ? '<span style="color:#f5e200">&#8593; Cede elétrons (fica +)</span>' : '<span style="color:#00f0ff">&#8595; Recebe elétrons (fica -)</span>'; }
   document.getElementById('dA').innerHTML = '<b style="color:#d0f0ff">'+MAT[kA].name+':</b> '+MAT[kA].desc+'<br>'+tend(MAT[kA].tv);
   document.getElementById('dB').innerHTML = '<b style="color:#d0f0ff">'+MAT[kB].name+':</b> '+MAT[kB].desc+'<br>'+tend(MAT[kB].tv);
 }
